@@ -694,6 +694,30 @@ mod tests {
     }
 
     #[test]
+    fn test_read_only_bitset_bucket_access_matches_bitset() {
+        let max_value = 1_000u32;
+        let mut bitset = BitSet::with_max_value(max_value);
+        for el in [0u32, 1, 63, 64, 65, 200, 511, 512, 999] {
+            bitset.insert(el);
+        }
+        let ro = ReadOnlyBitSet::from(&bitset);
+
+        let num_buckets = super::num_buckets(max_value);
+        // tinyset(bucket) parity for every bucket.
+        for bucket in 0..num_buckets {
+            assert_eq!(bitset.tinyset(bucket), ro.tinyset(bucket), "bucket {bucket}");
+        }
+        // first_non_empty_bucket(start) parity for every start, including one-past-the-end.
+        for start in 0..=num_buckets {
+            assert_eq!(
+                bitset.first_non_empty_bucket(start),
+                ro.first_non_empty_bucket(start),
+                "start {start}"
+            );
+        }
+    }
+
+    #[test]
     fn test_bitset_num_buckets() {
         use super::num_buckets;
         assert_eq!(num_buckets(0u32), 0);
