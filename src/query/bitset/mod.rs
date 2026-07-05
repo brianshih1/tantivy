@@ -3,7 +3,7 @@ use common::{BitSet, ReadOnlyBitSet, TinySet};
 use crate::docset::{DocSet, TERMINATED};
 use crate::DocId;
 
-pub trait BitSetBackingStore: Send {
+pub trait BitSetBacking: Send {
     /// Maximum value the bitset may contain (its intrinsic capacity).
     fn max_value(&self) -> u32;
     /// Tiny bitset for the bucket, i.e. elements `bucket * 64..(bucket + 1) * 64`.
@@ -14,7 +14,7 @@ pub trait BitSetBackingStore: Send {
     fn len(&self) -> usize;
 }
 
-impl BitSetBackingStore for BitSet {
+impl BitSetBacking for BitSet {
     #[inline]
     fn max_value(&self) -> u32 {
         BitSet::max_value(self)
@@ -33,7 +33,7 @@ impl BitSetBackingStore for BitSet {
     }
 }
 
-impl BitSetBackingStore for ReadOnlyBitSet {
+impl BitSetBacking for ReadOnlyBitSet {
     #[inline]
     fn max_value(&self) -> u32 {
         ReadOnlyBitSet::max_value(self)
@@ -71,14 +71,14 @@ pub struct BitSetDocSet<B = BitSet> {
     len: u32,
 }
 
-impl<B: BitSetBackingStore> BitSetDocSet<B> {
+impl<B: BitSetBacking> BitSetDocSet<B> {
     fn go_to_bucket(&mut self, bucket_addr: u32) {
         self.cursor_bucket = bucket_addr;
         self.cursor_tinybitset = self.docs.tinyset(bucket_addr);
     }
 }
 
-impl<B: BitSetBackingStore> From<B> for BitSetDocSet<B> {
+impl<B: BitSetBacking> From<B> for BitSetDocSet<B> {
     fn from(docs: B) -> BitSetDocSet<B> {
         let first_tiny_bitset = if docs.max_value() == 0 {
             TinySet::empty()
@@ -98,7 +98,7 @@ impl<B: BitSetBackingStore> From<B> for BitSetDocSet<B> {
     }
 }
 
-impl<B: BitSetBackingStore> DocSet for BitSetDocSet<B> {
+impl<B: BitSetBacking> DocSet for BitSetDocSet<B> {
     #[inline]
     fn advance(&mut self) -> DocId {
         if let Some(lower) = self.cursor_tinybitset.pop_lowest() {
