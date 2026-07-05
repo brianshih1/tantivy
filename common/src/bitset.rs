@@ -424,6 +424,26 @@ impl ReadOnlyBitSet {
         b & (1u8 << shift) != 0
     }
 
+    #[inline]
+    pub fn tinyset(&self, bucket: u32) -> TinySet {
+        let start = bucket as usize * 8;
+        let chunk: [u8; 8] = self.data[start..start + 8]
+            .try_into()
+            .expect("bitset data is a multiple of 8 bytes");
+        TinySet::deserialize(chunk)
+    }
+
+    #[inline]
+    pub fn first_non_empty_bucket(&self, bucket: u32) -> Option<u32> {
+        self.data[bucket as usize * 8..]
+            .chunks_exact(8)
+            .position(|chunk| {
+                let chunk: [u8; 8] = chunk.try_into().unwrap();
+                TinySet::deserialize(chunk) != TinySet::empty()
+            })
+            .map(|delta_bucket| bucket + delta_bucket as u32)
+    }
+
     /// Maximum value the bitset may contain.
     /// (Note this is not the maximum value contained in the set.)
     ///
